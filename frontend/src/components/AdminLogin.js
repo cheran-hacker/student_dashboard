@@ -1,170 +1,105 @@
 import React, { useState } from 'react';
-import { 
-  TextField, Button, Paper, Typography, Container, Box, 
-  InputAdornment, Alert, CircularProgress, IconButton 
-} from '@mui/material';
-import { 
-  AccountCircle, Lock, AdminPanelSettings, Visibility, VisibilityOff, Login 
-} from '@mui/icons-material';
+import { Box, Card, CardContent, TextField, Button, Typography, Alert, InputAdornment, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
-import '../App.css'; // Uses the same global animations
+import { Visibility, VisibilityOff, AdminPanelSettings } from '@mui/icons-material';
 
 const AdminLogin = () => {
+  const navigate = useNavigate();
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setCredentials({ ...credentials, [e.target.name]: e.target.value });
-    // Clear error when user starts typing again
-    if (error) setError('');
-  };
+  const handleChange = (e) => setCredentials({ ...credentials, [e.target.name]: e.target.value });
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setError('');
     
-    // Simulate a small delay for smoother UX
-    setTimeout(async () => {
-      try {
-        const res = await api.post('/admin/login', credentials);
-        localStorage.setItem('token', res.data.token);
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.token) {
+        localStorage.setItem('token', data.token);
         navigate('/admin/dashboard');
-      } catch (err) {
-        setError('Invalid Username or Password');
-        setLoading(false);
+      } else {
+        setError(data.message || 'Invalid Username or Password');
       }
-    }, 800);
+    } catch (err) {
+      console.error('Login Error:', err);
+      setError('Server is offline. Please ensure backend is running on port 5000.');
+    }
   };
 
   return (
-    <div className="register-bg"> {/* Reusing the animated gradient background */}
-      <Container maxWidth="xs" className="slide-up">
-        <Paper 
-          className="glass-card" 
-          elevation={6}
-          sx={{ 
-            p: 4, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center',
-            borderRadius: 4
-          }}
-        >
-          {/* Header Icon */}
-          <Box sx={{ 
-            bgcolor: 'primary.main', 
-            p: 2, 
-            borderRadius: '50%', 
-            mb: 2,
-            boxShadow: '0 4px 20px rgba(94, 53, 177, 0.4)'
-          }}>
-            <AdminPanelSettings sx={{ fontSize: 40, color: 'white' }} />
+    <Box sx={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #a855f7 0%, #d8b4fe 100%)' }}>
+      <Card sx={{ width: 380, p: 4, borderRadius: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+        <CardContent>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Box sx={{ bgcolor: '#5b21b6', width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
+                <AdminPanelSettings sx={{ color: 'white', fontSize: 30 }} />
+            </Box>
+            <Typography variant="h5" fontWeight="bold" sx={{ color: '#1e293b' }}>Admin Portal</Typography>
+            <Typography variant="body2" color="textSecondary">Sign in to manage the system</Typography>
           </Box>
-
-          <Typography variant="h5" fontWeight="800" color="#333" gutterBottom>
-            Admin Portal
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Sign in to manage the system
-          </Typography>
-
-          {/* Animated Error Message */}
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ width: '100%', mb: 2, borderRadius: 2 }}
-              className="fade-in"
-            >
-              {error}
-            </Alert>
-          )}
-
-          <form onSubmit={handleLogin} style={{ width: '100%' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-              
-              {/* Username Input */}
-              <TextField 
+          
+          {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
+          
+          <form onSubmit={handleLogin}>
+            <TextField 
+                fullWidth 
                 label="Username" 
                 name="username" 
-                fullWidth 
-                required 
+                margin="normal" 
                 value={credentials.username}
                 onChange={handleChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <AccountCircle color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              {/* Password Input */}
-              <TextField 
+                autoFocus
+            />
+            <TextField 
+                fullWidth 
                 label="Password" 
                 name="password" 
-                type={showPassword ? 'text' : 'password'} 
-                fullWidth 
-                required 
+                type={showPassword ? "text" : "password"} 
+                margin="normal" 
                 value={credentials.password}
                 onChange={handleChange}
                 InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock color="action" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
                 }}
-              />
-
-              {/* Submit Button */}
-              <Button 
+            />
+            
+            <Button 
+                fullWidth 
                 type="submit" 
                 variant="contained" 
                 size="large" 
-                fullWidth 
-                disabled={loading}
-                endIcon={!loading && <Login />}
-                sx={{ 
-                  mt: 1, 
-                  py: 1.5,
-                  borderRadius: 2,
-                  fontSize: '1rem',
-                  textTransform: 'none',
-                  background: 'linear-gradient(45deg, #5e35b1 30%, #9162e4 90%)',
-                  boxShadow: '0 3px 5px 2px rgba(94, 53, 177, .3)',
-                }}
-              >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
-              </Button>
-
-              <Button 
-                variant="text" 
-                size="small" 
-                onClick={() => navigate('/register')}
-                sx={{ mt: 1, color: 'text.secondary' }}
-              >
-                Back to Student Registration
-              </Button>
-            </Box>
+                sx={{ mt: 3, mb: 2, borderRadius: 2, bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' }, textTransform: 'none', fontSize: '1rem' }}
+            >
+                Login &rarr;
+            </Button>
           </form>
-        </Paper>
-      </Container>
-    </div>
+
+          <Box textAlign="center" mt={2}>
+             <Typography variant="caption" sx={{ color: '#64748b', cursor: 'pointer', '&:hover': {textDecoration: 'underline'} }} onClick={() => navigate('/register')}>
+                 Back to Student Registration
+             </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

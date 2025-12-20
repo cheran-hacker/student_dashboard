@@ -4,57 +4,49 @@ import {
   TextField, MenuItem, Button, Grid, Typography, Box, Chip, Card, IconButton, 
   InputAdornment, Avatar, Dialog, DialogTitle, DialogContent, 
   DialogActions, FormControl, InputLabel, Select, Checkbox, 
-  Paper, Divider, LinearProgress, Snackbar, Alert, FormGroup, FormControlLabel 
+  Paper, Divider, Snackbar, Alert, FormGroup, FormControlLabel, Drawer, List, ListItem, ListItemIcon, ListItemText, LinearProgress, Switch 
 } from '@mui/material';
 import { 
-  Search, CloudUpload, Add, Edit, Delete, 
-  People, BusinessCenter, AttachMoney, 
-  Mail, Close, Send, Terminal, Language, Storage, Cloud, School 
+  Search, CloudUpload, CloudDownload, Add, Edit, Delete, 
+  People, BusinessCenter, AttachMoney, TrendingUp,
+  Mail, Close, Send, Terminal, Language, Storage, Cloud,
+  DarkMode, LightMode, Dashboard, Logout, Settings, Build, Backup, Restore, Security 
 } from '@mui/icons-material';
 import { 
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid 
 } from 'recharts';
 import api from '../api';
-import AdminLayout from './AdminLayout';
 import '../App.css'; 
 
 // --- CONSTANTS ---
 const techOptions = ["C", "C++", "Java", "Python", "DS", "Algorithms", "React", "MERN", "HTML", "CSS", "Cloud", "Devops"];
 const deptOptions = ["CSE", "IT", "ECE", "EEE", "MECH", "CIVIL", "AIDS", "CSBS", "BME", "CHEM", "FASHION"];
 const placementStatusOptions = ["Unplaced", "Placed", "Higher Studies", "Entrepreneur"];
+const DRAWER_WIDTH = 260;
 
-// --- HELPER COMPONENTS ---
+// --- HELPER: Tech Icons ---
 const getTechIcon = (techName) => {
   const name = techName.toLowerCase();
   if (name.includes('java') || name.includes('python') || name.includes('c++')) return <Terminal fontSize="small" />;
   if (name.includes('react') || name.includes('html') || name.includes('css')) return <Language fontSize="small" />;
   if (name.includes('data') || name.includes('sql')) return <Storage fontSize="small" />;
-  if (name.includes('cloud')) return <Cloud fontSize="small" />;
-  return <Terminal fontSize="small" />;
+  return <Cloud fontSize="small" />;
 };
-
-const KpiCard = ({ title, value, subtext, icon, color }) => (
-  <Card className="dashboard-card" sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', borderRadius: 3 }}>
-    <Box>
-      <Typography variant="subtitle2" color="textSecondary" fontWeight="bold">{title}</Typography>
-      <Typography variant="h4" fontWeight="bold" sx={{ mt: 1, color: '#1e293b' }}>{value}</Typography>
-      {subtext && <Typography variant="caption" sx={{ color: color, fontWeight: 600 }}>{subtext}</Typography>}
-    </Box>
-    <Avatar sx={{ bgcolor: color, width: 56, height: 56, boxShadow: `0 4px 10px ${color}66` }}>{icon}</Avatar>
-  </Card>
-);
 
 const AdminDashboard = () => {
   // --- STATE ---
   const [students, setStudents] = useState([]);
   const [filters, setFilters] = useState({ department: '', year: '', technology: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [darkMode, setDarkMode] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
   
   // Dialogs
   const [openForm, setOpenForm] = useState(false);
   const [openImport, setOpenImport] = useState(false);
   const [openEmail, setOpenEmail] = useState(false);
+  const [openSettings, setOpenSettings] = useState(false); // Maintenance Dialog
   const [isEdit, setIsEdit] = useState(false);
   
   // Selection
@@ -68,24 +60,28 @@ const AdminDashboard = () => {
   const [formData, setFormData] = useState({ 
     registerNumber: '', name: '', email: '', year: '', department: '', 
     accommodationType: 'Day Scholar', technologiesKnown: [],
-    placementStatus: 'Unplaced', company: '', ctc: ''
+    placementStatus: 'Unplaced', company: '', ctc: '', cgpa: '' 
   });
   
-  // Email Data
+  // Bulk Data
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
-
-  // CSV Import
   const fileInputRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // --- API CALLS ---
-  const fetchStudents = async () => { try { const res = await api.get('/admin/students'); setStudents(res.data); } catch (err) { console.error(err); } };
+  const fetchStudents = async () => { 
+    try { 
+      const res = await api.get('/admin/students'); 
+      setStudents(res.data); 
+    } catch (err) { 
+      console.error('Failed to fetch students:', err);
+      setSnackbar({ open: true, message: 'Failed to load students', severity: 'error' });
+    } 
+  };
   useEffect(() => { fetchStudents(); }, []);
 
-  // --- FORM HANDLERS (DATABASE FIX APPLIED) ---
-  
-  // Unified Change Handler
+  // --- HANDLERS ---
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -95,15 +91,13 @@ const AdminDashboard = () => {
     const { value, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      technologiesKnown: checked 
-        ? [...prev.technologiesKnown, value] 
-        : prev.technologiesKnown.filter(t => t !== value)
+      technologiesKnown: checked ? [...prev.technologiesKnown, value] : prev.technologiesKnown.filter(t => t !== value)
     }));
   };
 
   const handleOpenNew = () => { 
     setIsEdit(false); 
-    setFormData({ registerNumber: '', name: '', email: '', year: '', department: '', accommodationType: 'Day Scholar', technologiesKnown: [], placementStatus: 'Unplaced', company: '', ctc: '' }); 
+    setFormData({ registerNumber: '', name: '', email: '', year: '', department: '', accommodationType: 'Day Scholar', technologiesKnown: [], placementStatus: 'Unplaced', company: '', ctc: '', cgpa: '' }); 
     setOpenForm(true); 
   };
 
@@ -114,69 +108,186 @@ const AdminDashboard = () => {
       ...s, 
       placementStatus: s.placementStatus || 'Unplaced',
       company: s.company || '',
-      ctc: s.ctc || '' 
+      ctc: s.ctc || '',
+      cgpa: s.cgpa || '' 
     }); 
     setOpenForm(true); 
   };
 
   const handleSubmit = async () => { 
     try { 
-      // Clean Payload: Ensure numbers are numbers and conditional fields are handled
+      // Clean payload logic
+      const { _id, __v, createdAt, updatedAt, ...cleanData } = formData;
       const payload = { 
-        name: formData.name,
-        registerNumber: formData.registerNumber,
-        email: formData.email,
-        department: formData.department,
-        year: formData.year,
-        technologiesKnown: formData.technologiesKnown,
-        placementStatus: formData.placementStatus,
-        accommodationType: formData.accommodationType,
-        company: formData.placementStatus === 'Placed' ? formData.company : '',
-        ctc: formData.placementStatus === 'Placed' ? Number(formData.ctc) : 0,
+        ...cleanData,
+        ctc: cleanData.placementStatus === 'Placed' ? Number(cleanData.ctc) : 0,
+        cgpa: Number(cleanData.cgpa) || 0 
       };
 
       if (isEdit) {
-        // PUT request: ID goes in URL, NOT in body
         await api.put(`/admin/students/${currentStudentId}`, payload);
         setSnackbar({ open: true, message: 'Student updated successfully!', severity: 'success' });
       } else {
-        // POST request
         await api.post('/students/register', payload);
         setSnackbar({ open: true, message: 'Student created successfully!', severity: 'success' });
       }
-      
-      fetchStudents(); 
-      setOpenForm(false); 
+      fetchStudents(); setOpenForm(false); 
     } catch (err) { 
       console.error(err);
-      setSnackbar({ open: true, message: 'Operation failed. Please try again.', severity: 'error' });
+      setSnackbar({ open: true, message: 'Operation failed.', severity: 'error' });
     } 
   };
 
   const handleDelete = async (id) => { 
-    if (window.confirm('Are you sure you want to delete this student?')) { 
-      try {
-        await api.delete(`/admin/students/${id}`); 
-        fetchStudents();
-        setSnackbar({ open: true, message: 'Deleted successfully', severity: 'success' });
-      } catch(err) {
-        setSnackbar({ open: true, message: 'Delete failed', severity: 'error' });
-      }
+    if (window.confirm('Delete student?')) { 
+      try { await api.delete(`/admin/students/${id}`); fetchStudents(); setSnackbar({ open: true, message: 'Deleted successfully', severity: 'success' }); } 
+      catch(err) { setSnackbar({ open: true, message: 'Delete failed', severity: 'error' }); }
     } 
+  };
+
+  // --- CSV EXPORT ---
+  const handleExportCSV = () => {
+    const headers = ["RegisterNumber,Name,Email,Department,Year,CGPA,Status,Company,CTC"];
+    const rows = students.map(s => [
+      s.registerNumber,
+      `"${s.name}"`, 
+      s.email,
+      s.department,
+      s.year,
+      s.cgpa || 0,
+      s.placementStatus,
+      s.company || '-',
+      s.ctc || 0
+    ].join(","));
+    
+    const csvContent = [headers, ...rows].join("\n");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8;" }));
+    link.setAttribute("download", "educrm_students.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- CSV IMPORT (Frontend Parsing) ---
+  const handleImportCSV = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setUploadProgress(10);
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        const text = e.target.result;
+        // Basic CSV Parsing (Split by line, then comma)
+        const lines = text.split('\n').filter(l => l.trim());
+        const headers = lines[0].split(','); // Assuming first row is header
+        
+        let successCount = 0;
+        setUploadProgress(30);
+
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i].split(',');
+          if(row.length < 5) continue; // Skip invalid rows
+
+          // Simple Mock Mapping (Adjust indices based on your CSV structure)
+          // Assuming CSV: RegNo, Name, Email, Dept, Year
+          const newStudent = {
+             registerNumber: row[0]?.trim(),
+             name: row[1]?.trim().replace(/"/g, ''),
+             email: row[2]?.trim(),
+             department: row[3]?.trim(),
+             year: row[4]?.trim(),
+             // Defaults
+             accommodationType: 'Day Scholar',
+             placementStatus: 'Unplaced',
+             technologiesKnown: []
+          };
+
+          try {
+             await api.post('/students/register', newStudent);
+             successCount++;
+          } catch(err) {
+             console.log("Import Error for row", i);
+          }
+          setUploadProgress(30 + (i / lines.length) * 70);
+        }
+
+        setUploadProgress(100);
+        setTimeout(() => {
+          setOpenImport(false);
+          setUploadProgress(0);
+          setSnackbar({ open: true, message: `Imported ${successCount} students successfully!`, severity: 'success' });
+          fetchStudents();
+        }, 1000);
+      };
+      
+      reader.readAsText(file);
+    }
+  };
+
+  // --- MAINTENANCE & SETTINGS ---
+  const handleMaintenanceToggle = async () => {
+    const newVal = !maintenanceMode;
+    const previousVal = maintenanceMode;
+    setMaintenanceMode(newVal);
+    
+    try {
+      const res = await api.post('/config/maintenance', { value: newVal });
+      setMaintenanceMode(res.data.maintenanceMode);
+      setSnackbar({ 
+        open: true, 
+        message: res.data.maintenanceMode ? 'System is now in Maintenance Mode' : 'System is Live', 
+        severity: res.data.maintenanceMode ? 'warning' : 'success' 
+      });
+    } catch (err) {
+      console.error('Failed to update maintenance mode:', err);
+      setMaintenanceMode(previousVal);
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to update maintenance mode', 
+        severity: 'error' 
+      });
+    }
+  };
+  
+  // Fetch maintenance mode status on mount
+  useEffect(() => {
+    const fetchMaintenanceStatus = async () => {
+      try {
+        const res = await api.get('/config/maintenance');
+        setMaintenanceMode(res.data.maintenanceMode);
+      } catch (err) {
+        console.error('Failed to fetch maintenance status:', err);
+      }
+    };
+    fetchMaintenanceStatus();
+  }, []);
+
+  const handleBackup = () => {
+    const jsonString = JSON.stringify(students, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `educrm_backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    setSnackbar({ open: true, message: 'Database Backup Downloaded!', severity: 'info' });
+  };
+
+  const handleSendEmail = () => { 
+      setOpenEmail(false); 
+      setSelectedIds([]); 
+      setSnackbar({ open: true, message: `Email sent to ${selectedIds.length} students!`, severity: 'info' }); 
   };
 
   // --- SELECTION & FILTER LOGIC ---
   const filteredStudents = students.filter(student => (
     (filters.department === '' || student.department === filters.department) &&
     (filters.year === '' || student.year === filters.year) &&
-    (filters.technology === '' || student.technologiesKnown.includes(filters.technology)) && 
     (student.name.toLowerCase().includes(searchTerm.toLowerCase()) || student.registerNumber.includes(searchTerm))
   ));
 
-  const handleSelectAll = (event) => {
-    setSelectedIds(event.target.checked ? filteredStudents.map((n) => n._id) : []);
-  };
-
+  const handleSelectAll = (event) => setSelectedIds(event.target.checked ? filteredStudents.map((n) => n._id) : []);
   const handleSelectOne = (event, id) => {
     const selectedIndex = selectedIds.indexOf(id);
     let newSelected = [];
@@ -187,293 +298,265 @@ const AdminDashboard = () => {
     setSelectedIds(newSelected);
   };
 
-  // --- BULK IMPORT (MOCK) ---
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setUploadProgress(10);
-      setTimeout(() => setUploadProgress(100), 1000);
-      setTimeout(() => {
-        setOpenImport(false);
-        setUploadProgress(0);
-        setSnackbar({ open: true, message: 'Import successful!', severity: 'success' });
-        fetchStudents();
-      }, 1500);
-    }
-  };
+  // --- THEME & STYLES ---
+  const THEME_BG = darkMode ? '#0f172a' : '#f8fafc';
+  const CARD_BG = darkMode ? '#1e293b' : 'white';
+  const TEXT_PRIMARY = darkMode ? '#f8fafc' : '#1e293b';
+  const TEXT_SECONDARY = darkMode ? '#94a3b8' : '#64748b';
 
-  // --- BULK EMAIL (MOCK) ---
-  const handleSendEmail = () => {
-    console.log(`Sending email to ${selectedIds.length} students:`, emailSubject);
-    setOpenEmail(false);
-    setSelectedIds([]);
-    setSnackbar({ open: true, message: `Email sent to ${selectedIds.length} students!`, severity: 'info' });
-  };
-
-  // --- CHART DATA ---
+  // --- ANALYTICS ---
   const placedCount = students.filter(s => s.placementStatus === 'Placed').length;
   const placementRate = students.length > 0 ? ((placedCount / students.length) * 100).toFixed(0) : 0;
-  
-  // Calculate Avg Package
-  const placedWithPackage = students.filter(s => s.placementStatus === 'Placed' && s.ctc > 0);
-  const avgPackage = placedWithPackage.length > 0 
-    ? (placedWithPackage.reduce((acc, curr) => acc + curr.ctc, 0) / placedWithPackage.length).toFixed(1) 
-    : "0";
+  const validCgpaStudents = students.filter(s => s.cgpa > 0);
+  const avgCgpa = validCgpaStudents.length > 0 ? (validCgpaStudents.reduce((acc, curr) => acc + (Number(curr.cgpa) || 0), 0) / validCgpaStudents.length).toFixed(1) : "0";
 
-  // Dept Data
+  const cgpaDist = [
+    { range: '9-10', count: students.filter(s => s.cgpa >= 9).length },
+    { range: '8-9', count: students.filter(s => s.cgpa >= 8 && s.cgpa < 9).length },
+    { range: '7-8', count: students.filter(s => s.cgpa >= 7 && s.cgpa < 8).length },
+    { range: '< 7', count: students.filter(s => s.cgpa > 0 && s.cgpa < 7).length },
+  ];
+  
   const deptData = Object.entries(students.reduce((acc, curr) => ({...acc, [curr.department]: (acc[curr.department] || 0) + 1}), {})).map(([k,v]) => ({name:k, value:v}));
   
-  // Year Data
-  const yearData = ["1st", "2nd", "3rd", "4th"].map(y => ({ name: y, value: students.filter(s => s.year.includes(y)).length }));
-  
-  // Top Skills
   const techCounts = {}; 
   students.forEach(s => s.technologiesKnown.forEach(t => techCounts[t] = (techCounts[t] || 0) + 1));
   let sortedTech = Object.entries(techCounts).map(([k,v]) => ({name:k, count:v})).sort((a,b) => b.count - a.count).slice(0, 5);
   const maxTechCount = sortedTech.length > 0 ? sortedTech[0].count : 1;
-
   const CHART_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'];
 
   return (
-    <AdminLayout>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }} className="slide-up">
-        <Box>
-          <Typography variant="h4" fontWeight="bold" sx={{ color: '#1e293b' }}>Dashboard</Typography>
-          <Typography variant="body2" sx={{ color: '#64748b' }}>Manage students, placements & communications</Typography>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: THEME_BG, color: TEXT_PRIMARY }}>
+      
+      {/* 1. SIDEBAR DRAWER */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: DRAWER_WIDTH, boxSizing: 'border-box', bgcolor: '#1e293b', color: 'white', borderRight: 'none'
+          },
+        }}
+      >
+        <Box sx={{ p: 4 }}>
+          <Typography variant="h5" fontWeight="900" sx={{ background: 'linear-gradient(45deg, #6366f1, #ec4899)', backgroundClip: 'text', color: 'transparent', mb: 1 }}>EDUCRM</Typography>
+          <Typography variant="caption" sx={{ color: '#94a3b8' }}>Admin Portal v2.0</Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" startIcon={<CloudUpload />} onClick={() => setOpenImport(true)} sx={{ borderRadius: 2, textTransform: 'none' }}>Import CSV</Button>
-          <Button variant="contained" startIcon={<Add />} onClick={handleOpenNew} sx={{ borderRadius: 2, textTransform: 'none', bgcolor: '#3b82f6' }}>New Student</Button>
-        </Box>
-      </Box>
+        <List sx={{ px: 2 }}>
+          <ListItem button sx={{ bgcolor: '#334155', borderRadius: 2, mb: 1 }}><ListItemIcon><Dashboard sx={{ color: '#818cf8' }} /></ListItemIcon><ListItemText primary="Dashboard" /></ListItem>
+          <ListItem button sx={{ borderRadius: 2, mb: 1, color: '#94a3b8' }}><ListItemIcon><People sx={{ color: '#94a3b8' }} /></ListItemIcon><ListItemText primary="Students" /></ListItem>
+          <ListItem button sx={{ borderRadius: 2, mb: 1, color: '#94a3b8' }} onClick={() => setOpenSettings(true)}><ListItemIcon><Settings sx={{ color: '#94a3b8' }} /></ListItemIcon><ListItemText primary="Settings / Maintenance" /></ListItem>
+        </List>
+        <Box sx={{ mt: 'auto', p: 3 }}><Button startIcon={<Logout />} fullWidth sx={{ color: '#ef4444', justifyContent: 'flex-start' }}>Logout</Button></Box>
+      </Drawer>
 
-      {/* KPI Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }} className="slide-up">
-        <Grid item xs={12} md={4}><KpiCard title="Total Students" value={students.length} subtext="Active Profiles" icon={<People sx={{ color: 'white' }} />} color="#3b82f6" /></Grid>
-        <Grid item xs={12} md={4}><KpiCard title="Placement Rate" value={`${placementRate}%`} subtext={`${placedCount} Placed`} icon={<BusinessCenter sx={{ color: 'white' }} />} color="#10b981" /></Grid>
-        <Grid item xs={12} md={4}><KpiCard title="Avg Package" value={`₹${avgPackage} LPA`} subtext="Annual CTC" icon={<AttachMoney sx={{ color: 'white' }} />} color="#f59e0b" /></Grid>
-      </Grid>
-
-      {/* Charts Section */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      {/* 2. MAIN CONTENT AREA */}
+      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto', height: '100vh' }}>
         
-        {/* Department Split (Donut) */}
-        <Grid item xs={12} md={4}>
-          <Card className="dashboard-card" sx={{ p: 3, height: 420, borderRadius: 3 }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Department Split</Typography>
-            <ResponsiveContainer width="100%" height="90%">
-               <PieChart>
-                 <defs>{deptData.map((e,i) => <linearGradient key={i} id={`grad-${i}`}><stop stopColor={CHART_COLORS[i%5]} stopOpacity={1}/><stop offset="1" stopColor={CHART_COLORS[i%5]} stopOpacity={0.6}/></linearGradient>)}</defs>
-                 <Pie data={deptData} innerRadius={80} outerRadius={100} paddingAngle={5} dataKey="value" cornerRadius={5} stroke="none">
-                   {deptData.map((e,i) => <Cell key={i} fill={`url(#grad-${i})`} />)}
-                 </Pie>
-                 <RechartsTooltip contentStyle={{borderRadius: 12}} />
-                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                   <tspan x="50%" dy="-10" fontSize="28" fontWeight="bold" fill="#1e293b">{students.length}</tspan>
-                   <tspan x="50%" dy="24" fontSize="14" fill="#64748b">Total</tspan>
-                 </text>
-               </PieChart>
-            </ResponsiveContainer>
-          </Card>
-        </Grid>
-
-        {/* Enrollment Trends (Area) */}
-        <Grid item xs={12} md={4}>
-          <Card className="dashboard-card" sx={{ p: 3, height: 420, borderRadius: 3 }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Enrollment Trends</Typography>
-            <ResponsiveContainer width="100%" height="90%">
-               <AreaChart data={yearData}>
-                 <defs><linearGradient id="colorY" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/></linearGradient></defs>
-                 <CartesianGrid vertical={false} stroke="#f1f5f9" />
-                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} dy={10} />
-                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} />
-                 <RechartsTooltip contentStyle={{borderRadius: 8, backgroundColor: '#1e293b', color: '#fff', border:'none'}} itemStyle={{color:'#fff'}} />
-                 <Area type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorY)" />
-               </AreaChart>
-            </ResponsiveContainer>
-          </Card>
-        </Grid>
-
-        {/* Top Skills (Leaderboard) */}
-        <Grid item xs={12} md={4}>
-           <Card className="dashboard-card" sx={{ p: 3, height: 420, borderRadius: 3, display: 'flex', flexDirection: 'column' }}>
-             <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>Top In-Demand Skills</Typography>
-             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, flexGrow: 1, overflowY: 'auto', pr: 1 }}>
-                {sortedTech.map((tech, index) => {
-                   const percent = (tech.count / maxTechCount) * 100;
-                   const color = CHART_COLORS[index % 5];
-                   return (
-                     <Box key={tech.name}>
-                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                           <Avatar variant="rounded" sx={{ bgcolor: `${color}15`, color: color, width: 32, height: 32 }}>{getTechIcon(tech.name)}</Avatar>
-                           <Typography variant="body2" fontWeight="600" sx={{ color: '#334155' }}>{tech.name}</Typography>
-                         </Box>
-                         <Typography variant="caption" fontWeight="bold" sx={{ color: '#64748b' }}>{tech.count}</Typography>
-                       </Box>
-                       <Box sx={{ width: '100%', bgcolor: '#f1f5f9', borderRadius: 5, height: 6 }}>
-                         <Box sx={{ width: `${percent}%`, bgcolor: color, height: '100%', borderRadius: 5, transition: 'width 1s' }} />
-                       </Box>
-                     </Box>
-                   );
-                })}
-             </Box>
-           </Card>
-        </Grid>
-      </Grid>
-
-      {/* Main Table */}
-      <Card className="dashboard-card slide-up" sx={{ overflow: 'hidden', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', position: 'relative' }}>
-        <Box sx={{ p: 2, display: 'flex', gap: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #eee' }}>
-          <TextField size="small" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> }} sx={{ width: 250, bgcolor: 'white' }} />
-          <TextField select size="small" label="Dept" value={filters.department} onChange={(e) => setFilters({...filters, department: e.target.value})} sx={{ minWidth: 120, bgcolor: 'white' }}>
-            <MenuItem value="">All</MenuItem>{deptOptions.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
-          </TextField>
-          <Box sx={{ flexGrow: 1 }} />
-          {selectedIds.length > 0 && <Chip label={`${selectedIds.length} Selected`} color="primary" onDelete={() => setSelectedIds([])} sx={{ fontWeight: 'bold' }} />}
+        {/* Top Bar */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 5, alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h4" fontWeight="bold">Overview</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               {maintenanceMode && <Chip label="Maintenance Mode" color="warning" size="small" icon={<Build />} />}
+               <Typography variant="body1" sx={{ color: TEXT_SECONDARY }}>Welcome back, Admin</Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+             <IconButton onClick={() => setDarkMode(!darkMode)} sx={{ bgcolor: CARD_BG, boxShadow: 1 }}>{darkMode ? <LightMode sx={{ color: '#fbbf24' }} /> : <DarkMode sx={{ color: '#64748b' }} />}</IconButton>
+             <Button variant="outlined" startIcon={<CloudDownload />} onClick={handleExportCSV}>Export CSV</Button>
+             <Button variant="outlined" startIcon={<CloudUpload />} onClick={() => setOpenImport(true)}>Import CSV</Button>
+             <Button variant="contained" startIcon={<Add />} onClick={handleOpenNew} sx={{ bgcolor: '#6366f1', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>Add Student</Button>
+          </Box>
         </Box>
 
-        <TableContainer>
-          <Table>
-            <TableHead sx={{ bgcolor: '#f1f5f9' }}>
-              <TableRow>
-                <TableCell padding="checkbox"><Checkbox indeterminate={selectedIds.length > 0 && selectedIds.length < filteredStudents.length} checked={filteredStudents.length > 0 && selectedIds.length === filteredStudents.length} onChange={handleSelectAll} /></TableCell>
-                <TableCell><strong>Student</strong></TableCell>
-                <TableCell><strong>Department</strong></TableCell>
-                <TableCell><strong>Status</strong></TableCell>
-                <TableCell><strong>Company</strong></TableCell>
-                <TableCell align="right"><strong>Actions</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredStudents.map((s) => {
-                const isSelected = selectedIds.indexOf(s._id) !== -1;
-                return (
-                  <TableRow key={s._id} hover selected={isSelected}>
-                    <TableCell padding="checkbox"><Checkbox checked={isSelected} onChange={(event) => handleSelectOne(event, s._id)} /></TableCell>
+        {/* KPI Row */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {[
+            { title: "Total Students", val: students.length, icon: <People />, col: "#3b82f6" },
+            { title: "Placement Rate", val: `${placementRate}%`, icon: <BusinessCenter />, col: "#10b981" },
+            { title: "Avg CGPA", val: avgCgpa, icon: <TrendingUp />, col: "#8b5cf6" },
+            { title: "Avg Package", val: "₹4.5 L", icon: <AttachMoney />, col: "#f59e0b" }
+          ].map((k, i) => (
+            <Grid item xs={12} md={3} key={i}>
+              <Card sx={{ p: 3, display: 'flex', justifyContent: 'space-between', bgcolor: CARD_BG, borderRadius: 4, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: TEXT_SECONDARY, mb: 1 }}>{k.title}</Typography>
+                  <Typography variant="h4" fontWeight="bold" sx={{ color: TEXT_PRIMARY }}>{k.val}</Typography>
+                </Box>
+                <Avatar variant="rounded" sx={{ bgcolor: `${k.col}20`, color: k.col }}>{k.icon}</Avatar>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* Charts Row */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {/* CGPA Bar Chart */}
+          <Grid item xs={12} md={4}>
+            <Card sx={{ p: 3, height: 360, bgcolor: CARD_BG, borderRadius: 4 }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>Academic Spread</Typography>
+              <ResponsiveContainer width="100%" height="85%">
+                <BarChart data={cgpaDist}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? '#334155' : '#eee'} /><XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill:TEXT_SECONDARY}} /><YAxis axisLine={false} tickLine={false} tick={{fill:TEXT_SECONDARY}} /><RechartsTooltip contentStyle={{borderRadius:8, border:'none'}} cursor={{fill:'transparent'}} /><Bar dataKey="count" fill="#8b5cf6" radius={[4,4,0,0]} barSize={30} /></BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Grid>
+          {/* Department Pie */}
+          <Grid item xs={12} md={4}>
+            <Card sx={{ p: 3, height: 360, bgcolor: CARD_BG, borderRadius: 4 }}>
+               <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>Department Split</Typography>
+               <ResponsiveContainer width="100%" height="85%">
+                 <PieChart><Pie data={deptData} innerRadius={60} outerRadius={80} dataKey="value" paddingAngle={5}>{deptData.map((e,i)=><Cell key={i} fill={CHART_COLORS[i%5]}/>)}</Pie><RechartsTooltip contentStyle={{borderRadius:8}}/></PieChart>
+               </ResponsiveContainer>
+            </Card>
+          </Grid>
+          {/* Top Skills List */}
+          <Grid item xs={12} md={4}>
+            <Card sx={{ p: 3, height: 360, bgcolor: CARD_BG, borderRadius: 4, display:'flex', flexDirection:'column' }}>
+               <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>Top Skills</Typography>
+               <Box sx={{ overflowY: 'auto', pr: 1 }}>
+                  {sortedTech.map((t, i) => (
+                    <Box key={i} sx={{ mb: 2 }}>
+                      <Box sx={{ display:'flex', justifyContent:'space-between', mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight="600" sx={{ display:'flex', gap:1 }}>{getTechIcon(t.name)} {t.name}</Typography>
+                        <Typography variant="caption" sx={{ color: TEXT_SECONDARY }}>{t.count} students</Typography>
+                      </Box>
+                      <Box sx={{ width:'100%', height:6, bgcolor: darkMode?'#334155':'#f1f5f9', borderRadius:3 }}><Box sx={{ width:`${(t.count/maxTechCount)*100}%`, height:'100%', bgcolor: CHART_COLORS[i%5], borderRadius:3 }}/></Box>
+                    </Box>
+                  ))}
+               </Box>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Data Table */}
+        <Card sx={{ bgcolor: CARD_BG, borderRadius: 4, overflow: 'hidden' }}>
+          <Box sx={{ p: 3, borderBottom: `1px solid ${darkMode?'#334155':'#f1f5f9'}`, display:'flex', gap:2 }}>
+            <TextField size="small" placeholder="Search students..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} InputProps={{startAdornment:<InputAdornment position="start"><Search fontSize="small"/></InputAdornment>}} sx={{ bgcolor: darkMode?'#0f172a':'#f8fafc', borderRadius:2, fieldset:{border:'none'} }} />
+            {/* Dept Filter */}
+            <TextField select size="small" label="Dept" value={filters.department} onChange={e=>setFilters({...filters, department:e.target.value})} sx={{ minWidth: 120 }}>
+               <MenuItem value="">All</MenuItem>{deptOptions.map(d=><MenuItem key={d} value={d}>{d}</MenuItem>)}
+            </TextField>
+            {selectedIds.length > 0 && <Chip label={`${selectedIds.length} Selected`} color="primary" onDelete={() => setSelectedIds([])} />}
+          </Box>
+          <TableContainer>
+            <Table>
+              <TableHead sx={{ bgcolor: darkMode?'#0f172a':'#f8fafc' }}>
+                <TableRow>
+                  <TableCell padding="checkbox"><Checkbox checked={selectedIds.length===filteredStudents.length && filteredStudents.length>0} indeterminate={selectedIds.length>0 && selectedIds.length<filteredStudents.length} onChange={handleSelectAll} /></TableCell>
+                  <TableCell>Student</TableCell><TableCell>Dept</TableCell><TableCell>CGPA</TableCell><TableCell>Status</TableCell><TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredStudents.map(s => (
+                  <TableRow key={s._id} hover selected={selectedIds.includes(s._id)}>
+                    <TableCell padding="checkbox"><Checkbox checked={selectedIds.includes(s._id)} onChange={(e)=>handleSelectOne(e,s._id)}/></TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: '#eff6ff', color: '#3b82f6', fontWeight: 'bold' }}>{s.name[0]}</Avatar>
-                        <Box><Typography variant="subtitle2" fontWeight="600">{s.name}</Typography><Typography variant="caption" color="textSecondary">{s.registerNumber}</Typography></Box>
+                      <Box sx={{ display:'flex', gap:2, alignItems:'center' }}>
+                        <Avatar sx={{ bgcolor:'#e0e7ff', color:'#4f46e5', fontWeight:'bold' }}>{s.name[0]}</Avatar>
+                        <Box><Typography variant="subtitle2" fontWeight="bold">{s.name}</Typography><Typography variant="caption" sx={{ color: TEXT_SECONDARY }}>{s.registerNumber}</Typography></Box>
                       </Box>
                     </TableCell>
                     <TableCell><Chip label={s.department} size="small" variant="outlined" /></TableCell>
-                    <TableCell>
-                        <Chip 
-                            label={s.placementStatus || 'Unplaced'} 
-                            size="small" 
-                            icon={s.placementStatus === 'Placed' ? <BusinessCenter style={{fontSize: 14}}/> : s.placementStatus === 'Higher Studies' ? <School style={{fontSize: 14}}/> : undefined}
-                            sx={{ 
-                                bgcolor: s.placementStatus === 'Placed' ? '#dcfce7' : s.placementStatus === 'Higher Studies' ? '#dbeafe' : '#f1f5f9',
-                                color: s.placementStatus === 'Placed' ? '#166534' : s.placementStatus === 'Higher Studies' ? '#1e40af' : '#64748b',
-                                fontWeight: 'bold'
-                            }} 
-                        />
-                    </TableCell>
-                    <TableCell>
-                        {s.placementStatus === 'Placed' 
-                            ? <Typography variant="caption" fontWeight="bold"> {s.company} (₹{s.ctc} LPA) </Typography> 
-                            : <Typography variant="caption" color="textSecondary">--</Typography>
-                        }
-                    </TableCell>
+                    <TableCell><Typography fontWeight="bold" sx={{ color: s.cgpa>=8?'#10b981':'#f59e0b' }}>{s.cgpa}</Typography></TableCell>
+                    <TableCell><Chip label={s.placementStatus} size="small" sx={{ bgcolor: s.placementStatus==='Placed'?'#dcfce7':'#f1f5f9', color: s.placementStatus==='Placed'?'#166534':'#64748b', fontWeight:'bold' }} /></TableCell>
                     <TableCell align="right">
-                      <IconButton size="small" color="primary" onClick={() => handleOpenEdit(s)}><Edit fontSize="small" /></IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleDelete(s._id)}><Delete fontSize="small" /></IconButton>
+                      <IconButton size="small" onClick={()=>handleOpenEdit(s)} color="primary"><Edit fontSize="small"/></IconButton>
+                      <IconButton size="small" onClick={()=>handleDelete(s._id)} color="error"><Delete fontSize="small"/></IconButton>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
 
-        {/* Floating Bulk Actions */}
+        {/* Floating Action Bar */}
         {selectedIds.length > 0 && (
-          <Paper elevation={4} sx={{ position: 'fixed', bottom: 30, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, px: 3, py: 1.5, borderRadius: 10, bgcolor: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', gap: 3 }}>
-            <Typography variant="body2" fontWeight="bold">{selectedIds.length} students selected</Typography>
-            <Divider orientation="vertical" flexItem sx={{ bgcolor: 'gray' }} />
-            <Button startIcon={<Mail />} sx={{ color: 'white', textTransform: 'none' }} onClick={() => setOpenEmail(true)}>Send Bulk Email</Button>
-            <IconButton size="small" sx={{ color: '#94a3b8' }} onClick={() => setSelectedIds([])}><Close fontSize="small" /></IconButton>
+          <Paper elevation={6} sx={{ position: 'fixed', bottom: 30, left: '50%', transform: 'translateX(-50%)', bgcolor: '#1e293b', color: 'white', px: 3, py: 1.5, borderRadius: 50, display: 'flex', gap: 2, alignItems: 'center', zIndex:1200 }}>
+             <Typography variant="body2" fontWeight="bold">{selectedIds.length} Selected</Typography>
+             <Divider orientation="vertical" flexItem sx={{ bgcolor:'gray' }} />
+             <Button startIcon={<Mail/>} sx={{ color:'white' }} onClick={()=>setOpenEmail(true)}>Email</Button>
+             <IconButton size="small" onClick={()=>setSelectedIds([])} sx={{ color:'#94a3b8' }}><Close fontSize="small"/></IconButton>
           </Paper>
         )}
-      </Card>
+      </Box>
 
-      {/* STUDENT FORM DIALOG */}
-      <Dialog open={openForm} onClose={() => setOpenForm(false)} maxWidth="md" fullWidth>
+      {/* --- DIALOGS --- */}
+      <Dialog open={openForm} onClose={()=>setOpenForm(false)} maxWidth="md" fullWidth>
         <DialogTitle>{isEdit ? 'Edit Student' : 'New Student'}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
-            <TextField label="Name" name="name" fullWidth value={formData.name} onChange={handleFormChange} />
-            <TextField label="Reg No" name="registerNumber" fullWidth value={formData.registerNumber} onChange={handleFormChange} disabled={isEdit} />
-            <TextField label="Email" name="email" fullWidth value={formData.email} onChange={handleFormChange} sx={{ gridColumn: 'span 2' }} />
-            <FormControl fullWidth><InputLabel>Dept</InputLabel><Select name="department" value={formData.department} label="Dept" onChange={handleFormChange}>{deptOptions.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}</Select></FormControl>
-            <FormControl fullWidth><InputLabel>Year</InputLabel><Select name="year" value={formData.year} label="Year" onChange={handleFormChange}><MenuItem value="1st Year">1st Year</MenuItem><MenuItem value="2nd Year">2nd Year</MenuItem><MenuItem value="3rd Year">3rd Year</MenuItem><MenuItem value="4th Year">4th Year</MenuItem></Select></FormControl>
-            
-            <Divider sx={{ gridColumn: 'span 2', my: 1 }} />
-            <Typography variant="subtitle2" sx={{ gridColumn: 'span 2', color: '#64748b' }}>Placement Status</Typography>
-            
-            <FormControl fullWidth sx={{ gridColumn: 'span 2' }}>
-              <InputLabel>Status</InputLabel>
-              <Select name="placementStatus" value={formData.placementStatus} label="Status" onChange={handleFormChange}>
-                {placementStatusOptions.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-              </Select>
-            </FormControl>
-
-            {formData.placementStatus === 'Placed' && (
-              <>
-                 <TextField label="Company" name="company" fullWidth value={formData.company} onChange={handleFormChange} placeholder="e.g. Google" />
-                 <TextField label="Package (LPA)" name="ctc" type="number" fullWidth value={formData.ctc} onChange={handleFormChange} placeholder="12.5" />
-              </>
-            )}
-
-            <FormControl component="fieldset" sx={{ gridColumn: 'span 2', mt: 2 }}>
-              <Typography variant="caption" sx={{ mb: 1 }}>Skills</Typography>
-              <FormGroup row>
-                {techOptions.map(t => (
-                  <FormControlLabel key={t} control={<Checkbox checked={formData.technologiesKnown.includes(t)} value={t} onChange={handleTechChange} size="small" />} label={<Typography variant="body2">{t}</Typography>} />
-                ))}
-              </FormGroup>
-            </FormControl>
-          </Box>
+           <Box sx={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:2, mt:1 }}>
+             <TextField label="Name" name="name" value={formData.name} onChange={handleFormChange} fullWidth />
+             <TextField label="Reg No" name="registerNumber" value={formData.registerNumber} onChange={handleFormChange} disabled={isEdit} fullWidth />
+             <TextField label="Email" name="email" value={formData.email} onChange={handleFormChange} fullWidth />
+             <TextField label="CGPA" name="cgpa" type="number" value={formData.cgpa} onChange={handleFormChange} fullWidth />
+             <FormControl fullWidth><InputLabel>Dept</InputLabel><Select name="department" value={formData.department} label="Dept" onChange={handleFormChange}>{deptOptions.map(d=><MenuItem key={d} value={d}>{d}</MenuItem>)}</Select></FormControl>
+             <FormControl fullWidth><InputLabel>Status</InputLabel><Select name="placementStatus" value={formData.placementStatus} label="Status" onChange={handleFormChange}>{placementStatusOptions.map(s=><MenuItem key={s} value={s}>{s}</MenuItem>)}</Select></FormControl>
+             {formData.placementStatus === 'Placed' && (
+                <>
+                  <TextField label="Company" name="company" value={formData.company} onChange={handleFormChange} fullWidth />
+                  <TextField label="Package (LPA)" name="ctc" type="number" value={formData.ctc} onChange={handleFormChange} fullWidth />
+                </>
+             )}
+             <FormControl component="fieldset" sx={{ gridColumn:'span 2', mt:1 }}>
+               <Typography variant="caption">Technical Skills</Typography>
+               <FormGroup row>{techOptions.map(t=><FormControlLabel key={t} control={<Checkbox checked={formData.technologiesKnown.includes(t)} value={t} onChange={handleTechChange} size="small"/>} label={t}/>)}</FormGroup>
+             </FormControl>
+           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setOpenForm(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit}>Save</Button>
-        </DialogActions>
+        <DialogActions><Button onClick={()=>setOpenForm(false)}>Cancel</Button><Button variant="contained" onClick={handleSubmit}>Save</Button></DialogActions>
       </Dialog>
-
-      {/* IMPORT DIALOG */}
-      <Dialog open={openImport} onClose={() => setOpenImport(false)} maxWidth="sm" fullWidth>
+      
+      {/* IMPORT CSV DIALOG */}
+      <Dialog open={openImport} onClose={()=>setOpenImport(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Import CSV</DialogTitle>
         <DialogContent>
-          <Box sx={{ border: '2px dashed #ccc', borderRadius: 2, p: 4, textAlign: 'center', cursor: 'pointer', mt: 1 }} onClick={() => fileInputRef.current.click()}>
-            <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept=".csv" />
-            <CloudUpload sx={{ fontSize: 40, color: '#94a3b8' }} />
-            <Typography variant="body2" sx={{ mt: 1 }}>Click to upload student data CSV</Typography>
+          <Box sx={{ p:4, border:'2px dashed #ccc', textAlign:'center', cursor:'pointer' }} onClick={()=>fileInputRef.current.click()}>
+            <input type="file" hidden ref={fileInputRef} onChange={handleImportCSV} accept=".csv" />
+            <CloudUpload fontSize="large"/>
+            <Typography>Click to Upload CSV</Typography>
+            <Typography variant="caption" sx={{color:'gray'}}>Format: RegNo,Name,Email,Dept,Year</Typography>
+            {uploadProgress > 0 && <LinearProgress variant="determinate" value={uploadProgress} sx={{mt:2}} />}
           </Box>
         </DialogContent>
       </Dialog>
       
       {/* EMAIL DIALOG */}
-      <Dialog open={openEmail} onClose={() => setOpenEmail(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Compose Email</DialogTitle>
+      <Dialog open={openEmail} onClose={()=>setOpenEmail(false)} maxWidth="sm" fullWidth><DialogTitle>Bulk Email</DialogTitle><DialogContent><TextField label="Subject" fullWidth sx={{mb:2, mt:1}} value={emailSubject} onChange={e=>setEmailSubject(e.target.value)}/><TextField label="Message" multiline rows={4} fullWidth value={emailBody} onChange={e=>setEmailBody(e.target.value)}/></DialogContent><DialogActions><Button onClick={()=>setOpenEmail(false)}>Cancel</Button><Button variant="contained" startIcon={<Send/>} onClick={handleSendEmail}>Send</Button></DialogActions></Dialog>
+      
+      {/* MAINTENANCE / SETTINGS DIALOG */}
+      <Dialog open={openSettings} onClose={()=>setOpenSettings(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>System Maintenance</DialogTitle>
         <DialogContent>
-          <Typography variant="caption" sx={{ mb: 2, display: 'block' }}>Sending to {selectedIds.length} recipients</Typography>
-          <TextField autoFocus margin="dense" label="Subject" fullWidth value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
-          <TextField margin="dense" label="Message" fullWidth multiline rows={4} value={emailBody} onChange={(e) => setEmailBody(e.target.value)} />
+          <List>
+            <ListItem>
+              <ListItemIcon><Build color="warning"/></ListItemIcon>
+              <ListItemText primary="Maintenance Mode" secondary="Disable student access" />
+              <Switch checked={maintenanceMode} onChange={handleMaintenanceToggle} />
+            </ListItem>
+            <Divider />
+            <ListItem button onClick={handleBackup}>
+              <ListItemIcon><Backup color="primary"/></ListItemIcon>
+              <ListItemText primary="Backup Database" secondary="Download JSON dump" />
+            </ListItem>
+            <ListItem button>
+              <ListItemIcon><Restore /></ListItemIcon>
+              <ListItemText primary="Restore Data" secondary="Upload backup file" />
+            </ListItem>
+            <ListItem button>
+               <ListItemIcon><Security color="error"/></ListItemIcon>
+               <ListItemText primary="Clear Logs" secondary="Delete system activity logs" />
+            </ListItem>
+          </List>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenEmail(false)}>Cancel</Button>
-          <Button variant="contained" endIcon={<Send />} onClick={handleSendEmail}>Send</Button>
-        </DialogActions>
+        <DialogActions><Button onClick={()=>setOpenSettings(false)}>Close</Button></DialogActions>
       </Dialog>
 
-      {/* SNACKBAR */}
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
-      </Snackbar>
-    </AdminLayout>
+      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={()=>setSnackbar({...snackbar, open:false})}><Alert severity={snackbar.severity} sx={{width:'100%'}}>{snackbar.message}</Alert></Snackbar>
+
+    </Box>
   );
 };
 

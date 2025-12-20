@@ -27,10 +27,10 @@ const StudentRegister = () => {
   useEffect(() => {
     const checkSystemStatus = async () => {
       try {
-        const res = await api.get('/config');
+        const res = await api.get('/config/maintenance');
         setMaintenance(res.data.maintenanceMode);
       } catch (err) { 
-        console.error("Backend offline or config fetch failed"); 
+        console.error("Backend offline or config fetch failed:", err); 
       } finally { 
         setLoadingConfig(false); 
       }

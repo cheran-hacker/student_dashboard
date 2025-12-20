@@ -11,21 +11,32 @@ const AdminSettings = ({ darkMode, setDarkMode }) => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const res = await api.get('/config');
+        const res = await api.get('/config/maintenance');
         setMaintenanceMode(res.data.maintenanceMode);
         setLoading(false);
-      } catch (err) { setLoading(false); }
+      } catch (err) { 
+        console.error('Failed to fetch config:', err);
+        setLoading(false); 
+      }
     };
     fetchConfig();
   }, []);
 
   const handleMaintenanceToggle = async (e) => {
     const newVal = e.target.checked;
+    const previousVal = maintenanceMode;
     setMaintenanceMode(newVal);
     try {
-      await api.put('/config', { maintenanceMode: newVal });
+      const res = await api.post('/config/maintenance', { value: newVal });
+      setMaintenanceMode(res.data.maintenanceMode);
       setMsg(newVal ? "System is in Maintenance Mode" : "System is Live");
-    } catch (err) { setMaintenanceMode(!newVal); }
+      setTimeout(() => setMsg(''), 3000);
+    } catch (err) { 
+      console.error('Failed to update maintenance mode:', err);
+      setMaintenanceMode(previousVal);
+      setMsg('Failed to update maintenance mode');
+      setTimeout(() => setMsg(''), 3000);
+    }
   };
 
   return (
