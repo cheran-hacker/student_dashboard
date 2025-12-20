@@ -38,7 +38,18 @@ const StudentRegister = () => {
     checkSystemStatus();
   }, []);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    let value = e.target.value;
+    // Normalize register number to uppercase
+    if (e.target.name === 'registerNumber') {
+      value = value.toUpperCase();
+    }
+    // Normalize email to lowercase
+    if (e.target.name === 'email') {
+      value = value.toLowerCase();
+    }
+    setFormData({ ...formData, [e.target.name]: value });
+  };
 
   const handleTechToggle = (tech) => {
     const currentTechs = formData.technologiesKnown;
@@ -49,9 +60,35 @@ const StudentRegister = () => {
     }
   };
 
+  const validateForm = () => {
+    if (!formData.name || formData.name.trim().length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    if (!formData.registerNumber || formData.registerNumber.trim().length < 3) {
+      return 'Register Number is required and must be at least 3 characters';
+    }
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      return 'Valid email address is required';
+    }
+    if (!formData.year) {
+      return 'Please select your year';
+    }
+    if (!formData.department) {
+      return 'Please select your department';
+    }
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return; 
+    
+    // Validate form
+    const validationError = validateForm();
+    if (validationError) {
+      setMessage({ type: 'error', text: validationError });
+      return;
+    }
     
     setSubmitting(true); 
     setMessage(null);
@@ -71,8 +108,11 @@ const StudentRegister = () => {
         setMessage({ type: 'error', text: 'Server is offline. Please run "npm start" in backend folder.' });
       } else if (err.response && err.response.status === 503) {
         setMaintenance(true);
+        setMessage({ type: 'error', text: 'System is under maintenance. Please try again later.' });
+      } else if (err.response && err.response.status === 400) {
+        setMessage({ type: 'error', text: err.response?.data?.message || 'Validation failed. Please check your input.' });
       } else {
-        setMessage({ type: 'error', text: err.response?.data?.message || 'Registration Failed' });
+        setMessage({ type: 'error', text: err.response?.data?.message || 'Registration Failed. Please try again.' });
       }
     } finally {
       setSubmitting(false); 

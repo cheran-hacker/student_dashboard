@@ -11,14 +11,30 @@ exports.registerStudent = async (req, res) => {
       return res.status(503).json({ message: 'Maintenance Mode ON' });
     }
 
+    // Normalize register number to uppercase for consistency
+    if (req.body.registerNumber) {
+      req.body.registerNumber = req.body.registerNumber.trim().toUpperCase();
+    }
+    
+    // Normalize email to lowercase
+    if (req.body.email) {
+      req.body.email = req.body.email.trim().toLowerCase();
+    }
+    
     // Check for duplicates
     const existingStudent = await Student.findOne({ 
-      $or: [{ email: req.body.email }, { registerNumber: req.body.registerNumber }] 
+      $or: [
+        { email: req.body.email }, 
+        { registerNumber: req.body.registerNumber }
+      ] 
     });
     
     if (existingStudent) {
       console.log("2. Duplicate found");
-      return res.status(400).json({ message: 'Student already exists' });
+      const duplicateField = existingStudent.email === req.body.email ? 'email' : 'register number';
+      return res.status(400).json({ 
+        message: `Student with this ${duplicateField} already exists` 
+      });
     }
 
     // Create and Save
@@ -33,7 +49,25 @@ exports.registerStudent = async (req, res) => {
 
   } catch (err) {
     console.error("X. SERVER ERROR:", err.message);
-    // This catch block handles connection timeouts or validation errors
+    
+    // Handle duplicate key error (MongoDB unique constraint)
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({ 
+        message: `Student with this ${field === 'email' ? 'email address' : 'register number'} already exists` 
+      });
+    }
+    
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ 
+        message: 'Validation Error',
+        errors: errors 
+      });
+    }
+    
+    // Generic server error
     return res.status(500).json({ message: 'Server Error: ' + err.message });
   }
 };

@@ -84,7 +84,17 @@ const AdminDashboard = () => {
   // --- HANDLERS ---
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    // Normalize register number to uppercase
+    if (name === 'registerNumber') {
+      setFormData(prev => ({ ...prev, [name]: value.toUpperCase() }));
+    }
+    // Normalize email to lowercase
+    else if (name === 'email') {
+      setFormData(prev => ({ ...prev, [name]: value.toLowerCase() }));
+    }
+    else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleTechChange = (e) => {
@@ -114,13 +124,45 @@ const AdminDashboard = () => {
     setOpenForm(true); 
   };
 
+  const validateStudentForm = () => {
+    if (!formData.name || formData.name.trim().length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    if (!formData.registerNumber || formData.registerNumber.trim().length < 3) {
+      return 'Register Number is required and must be at least 3 characters';
+    }
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      return 'Valid email address is required';
+    }
+    if (!formData.year) {
+      return 'Please select a year';
+    }
+    if (!formData.department) {
+      return 'Please select a department';
+    }
+    if (formData.cgpa && (formData.cgpa < 0 || formData.cgpa > 10)) {
+      return 'CGPA must be between 0 and 10';
+    }
+    if (formData.placementStatus === 'Placed' && (!formData.company || formData.company.trim().length === 0)) {
+      return 'Company name is required when status is Placed';
+    }
+    return null;
+  };
+
   const handleSubmit = async () => { 
+    // Validate form
+    const validationError = validateStudentForm();
+    if (validationError) {
+      setSnackbar({ open: true, message: validationError, severity: 'error' });
+      return;
+    }
+    
     try { 
       // Clean payload logic
       const { _id, __v, createdAt, updatedAt, ...cleanData } = formData;
       const payload = { 
         ...cleanData,
-        ctc: cleanData.placementStatus === 'Placed' ? Number(cleanData.ctc) : 0,
+        ctc: cleanData.placementStatus === 'Placed' ? Number(cleanData.ctc) || 0 : 0,
         cgpa: Number(cleanData.cgpa) || 0 
       };
 
@@ -131,17 +173,27 @@ const AdminDashboard = () => {
         await api.post('/students/register', payload);
         setSnackbar({ open: true, message: 'Student created successfully!', severity: 'success' });
       }
-      fetchStudents(); setOpenForm(false); 
+      fetchStudents(); 
+      setOpenForm(false); 
     } catch (err) { 
-      console.error(err);
-      setSnackbar({ open: true, message: 'Operation failed.', severity: 'error' });
+      console.error('Submit Error:', err);
+      const errorMsg = err.response?.data?.message || 'Operation failed. Please try again.';
+      setSnackbar({ open: true, message: errorMsg, severity: 'error' });
     } 
   };
 
   const handleDelete = async (id) => { 
-    if (window.confirm('Delete student?')) { 
-      try { await api.delete(`/admin/students/${id}`); fetchStudents(); setSnackbar({ open: true, message: 'Deleted successfully', severity: 'success' }); } 
-      catch(err) { setSnackbar({ open: true, message: 'Delete failed', severity: 'error' }); }
+    if (window.confirm('Are you sure you want to delete this student? This action cannot be undone.')) { 
+      try { 
+        await api.delete(`/admin/students/${id}`); 
+        fetchStudents(); 
+        setSnackbar({ open: true, message: 'Student deleted successfully', severity: 'success' }); 
+      } 
+      catch(err) { 
+        console.error('Delete Error:', err);
+        const errorMsg = err.response?.data?.message || 'Delete failed. Please try again.';
+        setSnackbar({ open: true, message: errorMsg, severity: 'error' }); 
+      }
     } 
   };
 
@@ -179,13 +231,15 @@ const AdminDashboard = () => {
       reader.onload = async (e) => {
         const text = e.target.result;
         // Basic CSV Parsing (Split by line, then comma)
+        // Expected CSV format: RegNo,Name,Email,Dept,Year
         const lines = text.split('\n').filter(l => l.trim());
-        const headers = lines[0].split(','); // Assuming first row is header
+        // Skip header row if present
+        const startIndex = lines[0] && lines[0].includes('RegisterNumber') ? 1 : 0;
         
         let successCount = 0;
         setUploadProgress(30);
 
-        for (let i = 1; i < lines.length; i++) {
+        for (let i = startIndex; i < lines.length; i++) {
           const row = lines[i].split(',');
           if(row.length < 5) continue; // Skip invalid rows
 
@@ -348,7 +402,19 @@ const AdminDashboard = () => {
           <ListItem button sx={{ borderRadius: 2, mb: 1, color: '#94a3b8' }}><ListItemIcon><People sx={{ color: '#94a3b8' }} /></ListItemIcon><ListItemText primary="Students" /></ListItem>
           <ListItem button sx={{ borderRadius: 2, mb: 1, color: '#94a3b8' }} onClick={() => setOpenSettings(true)}><ListItemIcon><Settings sx={{ color: '#94a3b8' }} /></ListItemIcon><ListItemText primary="Settings / Maintenance" /></ListItem>
         </List>
-        <Box sx={{ mt: 'auto', p: 3 }}><Button startIcon={<Logout />} fullWidth sx={{ color: '#ef4444', justifyContent: 'flex-start' }}>Logout</Button></Box>
+        <Box sx={{ mt: 'auto', p: 3 }}>
+          <Button 
+            startIcon={<Logout />} 
+            fullWidth 
+            sx={{ color: '#ef4444', justifyContent: 'flex-start' }}
+            onClick={() => {
+              localStorage.removeItem('token');
+              window.location.href = '/admin/login';
+            }}
+          >
+            Logout
+          </Button>
+        </Box>
       </Drawer>
 
       {/* 2. MAIN CONTENT AREA */}

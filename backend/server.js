@@ -29,4 +29,26 @@ app.use('/api/admin', require('./routes/adminRoutes'));     // Admin routes
 app.use('/api/config', require('./routes/configRoutes'));   // Maintenance Mode
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Start server with error handling
+const server = app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`📍 API URL: http://127.0.0.1:${PORT}/api`);
+});
+
+// Handle port already in use error
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use!`);
+    console.log('\n💡 Solutions:');
+    console.log(`   1. Kill the process using port ${PORT}:`);
+    console.log(`      Windows: netstat -ano | findstr :${PORT}`);
+    console.log(`      Then: taskkill /PID <PID> /F`);
+    console.log(`   2. Or use a different port by setting PORT environment variable`);
+    console.log(`      Example: PORT=5001 node server.js`);
+    process.exit(1);
+  } else {
+    console.error('❌ Server error:', err);
+    process.exit(1);
+  }
+});
