@@ -1,21 +1,32 @@
 const express = require('express');
-const connectDB = require('./config/db');
-const cors = require('cors'); // Import cors
-require('dotenv').config();
+const mongoose = require('mongoose');
+const cors = require('cors');
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const app = express();
 
-// 1. Connect to Database
+// Middleware
+app.use(express.json());
+app.use(cors());
+
+// Database Connection
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/educrm');
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    process.exit(1);
+  }
+};
 connectDB();
 
-// 2. ENABLE CORS (The Fix)
-app.use(cors({ origin: '*' })); 
-app.use(express.json());
+// Routes
+app.use('/api/students', require('./routes/studentRoutes')); // Student CRUD
+app.use('/api/admin', require('./routes/adminRoutes'));     // Admin routes
+app.use('/api/config', require('./routes/configRoutes'));   // Maintenance Mode
 
-// 3. Routes
-app.use('/api/students', require('./routes/studentRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
-app.use('/api/config', require('./routes/configRoutes'));
-
-const PORT = 5000;
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -6,8 +6,8 @@ exports.registerStudent = async (req, res) => {
     console.log("1. Received Registration Request:", req.body.email);
 
     // Check Config
-    const config = await Config.findOne();
-    if (config && config.maintenanceMode) {
+    const config = await Config.findOne({ key: 'maintenance_mode' });
+    if (config && config.value === true) {
       return res.status(503).json({ message: 'Maintenance Mode ON' });
     }
 
