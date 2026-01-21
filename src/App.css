@@ -1,0 +1,80 @@
+/* --- GLOBAL VARIABLES --- */
+:root {
+  --primary-color: #5e35b1;
+  --secondary-color: #00b0ff;
+  --glass-bg: rgba(255, 255, 255, 0.95); /* High opacity for readability */
+  --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+  --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.1);
+  --transition-speed: 0.5s;
+}
+
+/* --- ANIMATIONS --- */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- UTILITY CLASSES --- */
+.slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-in forwards;
+}
+
+/* --- REGISTRATION PAGE STYLES --- */
+/* The Pink/Purple Gradient Background */
+.register-bg {
+  background: linear-gradient(135deg, #c74594 0%, #8e44ad 100%); 
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* The Main Card Container */
+.glass-card {
+  background: #ffffff;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+/* The Purple Sidebar inside the card */
+.sidebar-gradient {
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative Circles in Sidebar */
+.sidebar-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- ADMIN DASHBOARD STYLES --- */
+.dashboard-card {
+  border-radius: 16px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.1) !important;
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
