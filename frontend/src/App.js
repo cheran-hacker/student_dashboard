@@ -8,6 +8,7 @@ import StudentRegister from './components/StudentRegister';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
 import AdminSettings from './components/AdminSettings';
+const API_BASE_URL = "https://student-dashboard-1-x1m1.onrender.com";
 
 // Protected Route
 const PrivateRoute = ({ children }) => {
