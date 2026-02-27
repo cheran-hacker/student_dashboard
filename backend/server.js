@@ -16,6 +16,14 @@ app.use('/api/students', require('./routes/studentRoutes')); // Student CRUD
 app.use('/api/admin', require('./routes/adminRoutes'));     // Admin routes
 app.use('/api/config', require('./routes/configRoutes'));   // Maintenance Mode
 
+// Serve frontend static files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  });
+}
+
 const PORT = process.env.PORT || 5001;
 
 // Database Connection and Server Start
