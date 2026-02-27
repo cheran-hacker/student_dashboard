@@ -25,33 +25,32 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Applies the dark/light background globally */}
+      <CssBaseline />
       <Router>
         <Routes>
           <Route path="/" element={<Navigate to="/register" />} />
-          <Route path="/register" element={<StudentRegister />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          
-          <Route 
-            path="/admin/dashboard" 
+          <Route path="/register" element={<StudentRegister darkMode={darkMode} setDarkMode={setDarkMode} />} />
+          <Route path="/admin/login" element={<AdminLogin darkMode={darkMode} setDarkMode={setDarkMode} />} />
+
+          <Route
+            path="/admin/dashboard"
             element={
               <PrivateRoute>
-                <AdminDashboard />
+                <AdminDashboard darkMode={darkMode} setDarkMode={setDarkMode} />
               </PrivateRoute>
-            } 
+            }
           />
-          
-          {/* 3. PROP: Pass setDarkMode to the Settings Page */}
-          <Route 
-            path="/admin/settings" 
+
+          <Route
+            path="/admin/settings"
             element={
               <PrivateRoute>
-                <AdminSettings 
-                  darkMode={darkMode} 
-                  setDarkMode={setDarkMode} 
+                <AdminSettings
+                  darkMode={darkMode}
+                  setDarkMode={setDarkMode}
                 />
               </PrivateRoute>
-            } 
+            }
           />
         </Routes>
       </Router>
