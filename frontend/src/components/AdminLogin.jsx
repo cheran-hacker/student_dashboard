@@ -3,6 +3,7 @@ import { Box, TextField, Button, Typography, Alert, InputAdornment, IconButton }
 import { useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff, AdminPanelSettings, Lock, Person } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import api from '../api';
 import '../App.css';
 
 const AdminLogin = () => {
@@ -20,15 +21,10 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:5001/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-      });
+      const response = await api.post('/admin/login', credentials);
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok && data.token) {
+      if (data.token) {
         localStorage.setItem('token', data.token);
         navigate('/admin/dashboard');
       } else {
@@ -36,7 +32,7 @@ const AdminLogin = () => {
       }
     } catch (err) {
       console.error('Login Error:', err);
-      setError('Server is offline. Please ensure backend is running on port 5001.');
+      setError(err.response?.data?.message || 'Server is offline. Please ensure backend is running on port 5001.');
     } finally {
       setLoading(false);
     }
