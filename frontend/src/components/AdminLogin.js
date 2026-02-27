@@ -1,31 +1,32 @@
 import React, { useState } from 'react';
-import { Box, Card, CardContent, TextField, Button, Typography, Alert, InputAdornment, IconButton } from '@mui/material';
+import { Box, TextField, Button, Typography, Alert, InputAdornment, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Visibility, VisibilityOff, AdminPanelSettings } from '@mui/icons-material';
+import { Visibility, VisibilityOff, AdminPanelSettings, Lock, Person } from '@mui/icons-material';
+import '../App.css';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => setCredentials({ ...credentials, [e.target.name]: e.target.value });
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    
+    setLoading(true);
+
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/admin/login', {
+      const response = await fetch('http://127.0.0.1:5001/api/admin/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok && data.token) {
         localStorage.setItem('token', data.token);
         navigate('/admin/dashboard');
@@ -34,71 +35,169 @@ const AdminLogin = () => {
       }
     } catch (err) {
       console.error('Login Error:', err);
-      setError('Server is offline. Please ensure backend is running on port 5000.');
+      setError('Server is offline. Please ensure backend is running on port 5001.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <Box sx={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #a855f7 0%, #d8b4fe 100%)' }}>
-      <Card sx={{ width: 380, p: 4, borderRadius: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
-        <CardContent>
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Box sx={{ bgcolor: '#5b21b6', width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
-                <AdminPanelSettings sx={{ color: 'white', fontSize: 30 }} />
-            </Box>
-            <Typography variant="h5" fontWeight="bold" sx={{ color: '#1e293b' }}>Admin Portal</Typography>
-            <Typography variant="body2" color="textSecondary">Sign in to manage the system</Typography>
-          </Box>
-          
-          {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
-          
-          <form onSubmit={handleLogin}>
-            <TextField 
-                fullWidth 
-                label="Username" 
-                name="username" 
-                margin="normal" 
-                value={credentials.username}
-                onChange={handleChange}
-                autoFocus
-            />
-            <TextField 
-                fullWidth 
-                label="Password" 
-                name="password" 
-                type={showPassword ? "text" : "password"} 
-                margin="normal" 
-                value={credentials.password}
-                onChange={handleChange}
-                InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                }}
-            />
-            
-            <Button 
-                fullWidth 
-                type="submit" 
-                variant="contained" 
-                size="large" 
-                sx={{ mt: 3, mb: 2, borderRadius: 2, bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' }, textTransform: 'none', fontSize: '1rem' }}
-            >
-                Login &rarr;
-            </Button>
-          </form>
+  const inputSx = {
+    mb: 2,
+    '& .MuiOutlinedInput-root': {
+      color: '#e2e8f0',
+      borderRadius: '12px',
+      background: 'rgba(255,255,255,0.05)',
+      '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+      '&:hover fieldset': { borderColor: 'rgba(99,102,241,0.5)' },
+      '&.Mui-focused fieldset': {
+        borderColor: '#6366f1',
+        boxShadow: '0 0 0 3px rgba(99,102,241,0.2)',
+      },
+    },
+    '& .MuiInputLabel-root': { color: '#94a3b8' },
+    '& .MuiInputLabel-root.Mui-focused': { color: '#818cf8' },
+    '& .MuiInputAdornment-root svg': { color: '#64748b' },
+  };
 
-          <Box textAlign="center" mt={2}>
-             <Typography variant="caption" sx={{ color: '#64748b', cursor: 'pointer', '&:hover': {textDecoration: 'underline'} }} onClick={() => navigate('/register')}>
-                 Back to Student Registration
-             </Typography>
+  return (
+    <Box className="login-bg animated-bg">
+      {/* Floating Blobs */}
+      <Box className="blob blob-1" />
+      <Box className="blob blob-2" />
+      <Box className="blob blob-3" />
+
+      {/* Login Card */}
+      <Box
+        className="login-card slide-up"
+        sx={{ width: { xs: '90%', sm: 420 }, p: { xs: 3, sm: 5 }, zIndex: 1, position: 'relative' }}
+      >
+        {/* Logo */}
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box
+            className="login-logo-ring"
+            sx={{
+              width: 72, height: 72,
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              mx: 'auto', mb: 2.5,
+            }}
+          >
+            <AdminPanelSettings sx={{ color: 'white', fontSize: 34 }} />
           </Box>
-        </CardContent>
-      </Card>
+          <Typography
+            variant="h4"
+            fontWeight="800"
+            fontFamily="'Outfit', sans-serif"
+            sx={{
+              background: 'linear-gradient(135deg, #818cf8, #c084fc)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 0.5,
+            }}
+          >
+            EDUCRM
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748b', letterSpacing: '0.05em' }}>
+            Admin Portal — Secure Access
+          </Typography>
+        </Box>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3, borderRadius: '12px',
+              bgcolor: 'rgba(239,68,68,0.1)', color: '#fca5a5',
+              border: '1px solid rgba(239,68,68,0.2)',
+              '& .MuiAlert-icon': { color: '#f87171' },
+            }}
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleLogin}>
+          <TextField
+            fullWidth
+            label="Username"
+            name="username"
+            id="admin-username"
+            value={credentials.username}
+            onChange={handleChange}
+            autoFocus
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Person fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={inputSx}
+          />
+
+          <TextField
+            fullWidth
+            label="Password"
+            name="password"
+            id="admin-password"
+            type={showPassword ? 'text' : 'password'}
+            value={credentials.password}
+            onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Lock fontSize="small" />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ color: '#64748b' }}>
+                    {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={inputSx}
+          />
+
+          <Button
+            fullWidth
+            type="submit"
+            variant="contained"
+            size="large"
+            disabled={loading}
+            className="btn-shimmer"
+            sx={{
+              mt: 1, mb: 3, height: 52, borderRadius: '12px',
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 700, fontSize: '1rem',
+              textTransform: 'none',
+              letterSpacing: '0.03em',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            }}
+          >
+            {loading ? 'Signing In...' : 'Sign In →'}
+          </Button>
+        </form>
+
+        {/* Back Link */}
+        <Box textAlign="center">
+          <Typography
+            variant="caption"
+            sx={{
+              color: '#475569', cursor: 'pointer',
+              transition: 'color 0.2s',
+              '&:hover': { color: '#818cf8' },
+            }}
+            onClick={() => navigate('/register')}
+          >
+            ← Back to Student Registration
+          </Typography>
+        </Box>
+      </Box>
     </Box>
   );
 };

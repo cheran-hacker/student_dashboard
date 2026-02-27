@@ -6,22 +6,23 @@ const jwt = require('jsonwebtoken');
 exports.loginAdmin = async (req, res) => {
   try {
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password are required' });
     }
-    
-    // Simple check (In production, use bcrypt to compare hashed passwords)
-    // Accept both 'admin' and 'admin@educrm.com' as username
-    const isValid = (username === 'admin' || username === 'admin@educrm.com') && password === 'admin';
-    
-    if (isValid) {
-      const payload = { user: { id: 'admin_id', username: username } };
+
+    // Check user in database
+    const admin = await Admin.findOne({ username });
+
+    // In a real app, you would hash passwords. Here we compare plain text as per current schema.
+    if (admin && admin.password === password) {
+      const payload = { user: { id: admin._id, username: admin.username } };
       const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
       jwt.sign(
-        payload, 
-        secret, 
-        { expiresIn: '4h' }, 
+        payload,
+        secret,
+        { expiresIn: '4h' },
         (err, token) => {
           if (err) {
             console.error('JWT Error:', err);
@@ -54,15 +55,15 @@ exports.updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
     const updatedStudent = await Student.findByIdAndUpdate(
-      id, 
-      req.body, 
+      id,
+      req.body,
       { new: true, runValidators: true }
     );
-    
+
     if (!updatedStudent) {
       return res.status(404).json({ message: 'Student not found' });
     }
-    
+
     res.json(updatedStudent);
   } catch (err) {
     console.error('Update Error:', err);
@@ -75,11 +76,11 @@ exports.deleteStudent = async (req, res) => {
   try {
     const { id } = req.params;
     const deletedStudent = await Student.findByIdAndDelete(id);
-    
+
     if (!deletedStudent) {
       return res.status(404).json({ message: 'Student not found' });
     }
-    
+
     res.json({ message: 'Student removed successfully' });
   } catch (err) {
     console.error('Delete Error:', err);
