@@ -1,21 +1,21 @@
 {
-  "name": "backend",
+  "name": "student_dashboard",
   "version": "1.0.0",
+  "description": "A full-stack student management system with registration, admin dashboard, and analytics.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "server": "node server.js",
+    "client": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "start": "node server.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "jsonwebtoken": "^9.0.3",
-    "mongoose": "^8.7.3",
-    "nodemon": "^3.1.11"
+    "jsonwebtoken": "^9.0.3"
   }
 }
