@@ -1,8 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // Use 127.0.0.1 instead of localhost
-  baseURL: 'http://127.0.0.1:5001/api',
+  // Use relative path so it works in production on the same domain,
+  // and locally via Vite's proxy.
+  baseURL: '/api',
 });
 
 api.interceptors.request.use((config) => {
