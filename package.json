@@ -4,9 +4,14 @@
   "description": "A full-stack student management system with registration, admin dashboard, and analytics.",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "server": "node backend/server.js",
+    "client": "npm start --prefix frontend",
+    "start": "concurrently \"npm run server\" \"npm run client\""
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }
