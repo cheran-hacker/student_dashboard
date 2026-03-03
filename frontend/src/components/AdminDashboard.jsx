@@ -248,6 +248,10 @@ const AdminDashboard = ({ darkMode, setDarkMode }) => {
     if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Valid email required';
     if (!formData.year) return 'Year is required';
     if (!formData.department) return 'Department is required';
+    if (formData.placementStatus === 'Placed') {
+      if (!formData.company?.trim()) return 'Company name is required for Placed students';
+      if (!formData.ctc || Number(formData.ctc) <= 0) return 'Package (LPA) is required and must be greater than 0';
+    }
     return null;
   };
 
@@ -979,8 +983,8 @@ const AdminDashboard = ({ darkMode, setDarkMode }) => {
             <FormControl fullWidth sx={inputSx}><InputLabel>Year</InputLabel><Select name="year" value={formData.year} label="Year" onChange={handleFormChange}>{['1st Year', '2nd Year', '3rd Year', '4th Year'].map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}</Select></FormControl>
             <FormControl fullWidth sx={inputSx}><InputLabel>Placement Status</InputLabel><Select name="placementStatus" value={formData.placementStatus} label="Placement Status" onChange={handleFormChange}>{placementStatusOptions.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}</Select></FormControl>
             {formData.placementStatus === 'Placed' && <>
-              <TextField label="Company" name="company" value={formData.company} onChange={handleFormChange} fullWidth sx={inputSx} />
-              <TextField label="Package (LPA)" name="ctc" type="number" value={formData.ctc} onChange={handleFormChange} fullWidth sx={inputSx} />
+              <TextField label="Company" name="company" value={formData.company} onChange={handleFormChange} fullWidth required sx={inputSx} />
+              <TextField label="Package (LPA)" name="ctc" type="number" value={formData.ctc} onChange={handleFormChange} fullWidth required sx={inputSx} />
             </>}
             <FormControl component="fieldset" sx={{ gridColumn: 'span 2' }}>
               <Typography variant="caption" sx={{ color: TEXT2, fontWeight: 600, mb: 1, display: 'block' }}>Technical Skills</Typography>
